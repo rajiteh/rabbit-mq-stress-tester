@@ -26,7 +26,7 @@ func main() {
 		cli.StringFlag{Name: "server, s", Value: "rabbit-mq-test.cs1cloud.internal", Usage: "Hostname for RabbitMQ server"},
 		cli.StringFlag{Name: "port, P", Value: "5672", Usage: "Port for RabbitMQ server"},
 		cli.StringFlag{Name: "user, u", Value: "guest", Usage: "user for RabbitMQ server"},
-		cli.StringFlag{Name: "password, pass", Value: "guest", Usage: "user pasword for RabbitMQ server"},
+		cli.StringFlag{Name: "password, pass", Value: "guest", Usage: "user password for RabbitMQ server"},
 		cli.IntFlag{Name: "producer, p", Value: 0, Usage: "Number of messages to produce, -1 to produce forever"},
 		cli.IntFlag{Name: "wait, w", Value: 0, Usage: "Number of nanoseconds to wait between publish events"},
 		cli.IntFlag{Name: "consumer, c", Value: -1, Usage: "Number of messages to consume. 0 consumes forever"},
