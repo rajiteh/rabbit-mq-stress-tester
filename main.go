@@ -26,7 +26,8 @@ func main() {
 		cli.StringFlag{Name: "server, s", Value: "rabbit-mq-test.cs1cloud.internal", Usage: "Hostname for RabbitMQ server"},
 		cli.StringFlag{Name: "port, P", Value: "5672", Usage: "Port for RabbitMQ server"},
 		cli.StringFlag{Name: "user, u", Value: "guest", Usage: "user for RabbitMQ server"},
-		cli.StringFlag{Name: "password, pass", Value: "guest", Usage: "user pasword for RabbitMQ server"},
+		cli.StringFlag{Name: "password, pass", Value: "guest", Usage: "user password for RabbitMQ server"},
+		cli.StringFlag{Name: "vhost", Value: "", Usage: "vhost for RabbitMQ server"},
 		cli.IntFlag{Name: "producer, p", Value: 0, Usage: "Number of messages to produce, -1 to produce forever"},
 		cli.IntFlag{Name: "wait, w", Value: 0, Usage: "Number of nanoseconds to wait between publish events"},
 		cli.IntFlag{Name: "consumer, c", Value: -1, Usage: "Number of messages to consume. 0 consumes forever"},
@@ -45,7 +46,12 @@ func main() {
 func runApp(c *cli.Context) {
 	println("Running!")
 	porto := "amqp://"
-	uri := porto + c.String("user") + ":" + c.String("password") + "@" + c.String("server") + ":" + c.String("port")
+	uri := porto + c.String("user") + ":" + c.String("password") + "@" + c.String("server") +
+		":" + c.String("port")
+
+	if c.String("vhost") != "" {
+		uri += "/" + c.String("vhost")
+	}
 
 	if c.Int("consumer") > -1 {
 		makeConsumers(uri, c.Int("concurrency"), c.Int("consumer"))
