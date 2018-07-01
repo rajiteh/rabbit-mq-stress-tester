@@ -47,7 +47,11 @@ func runApp(c *cli.Context) {
 	println("Running!")
 	porto := "amqp://"
 	uri := porto + c.String("user") + ":" + c.String("password") + "@" + c.String("server") +
-		":" + c.String("port") + "/" + c.String("vhost")
+		":" + c.String("port")
+
+	if c.String("vhost") != "" {
+		uri += "/" + c.String("vhost")
+	}
 
 	if c.Int("consumer") > -1 {
 		makeConsumers(uri, c.Int("concurrency"), c.Int("consumer"))
