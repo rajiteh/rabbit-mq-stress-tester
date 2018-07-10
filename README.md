@@ -32,6 +32,8 @@ Running
 	   --user, -u                       Rabbitmq username
 	   --password, --pass               Rabbitmq password
 	   --vhost 'my-vhost'               Rabbitmq vhost, default /
+	   --consumer-arg key=value         Optional key=value pair to be sent to consumer arguments, repeat for multiple.
+   	   --queue-arg key=value            Optional key=value pair to be sent to queue declaration arguments, repeat for multiple.
 	   --wait, -w '0'                   Number of nanoseconds to wait between publish events
 	   --consumer, -c '-1'              Number of messages to consume. 0 consumes forever
 	   --bytes, -b '0'                  number of extra bytes to add to the RabbitMQ message payload. About 50K max

@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
-	"github.com/urfave/cli"
 	"github.com/streadway/amqp"
+	"github.com/urfave/cli"
 )
 
 var totalTime int64 = 0
@@ -28,6 +31,8 @@ func main() {
 		cli.StringFlag{Name: "user, u", Value: "guest", Usage: "user for RabbitMQ server"},
 		cli.StringFlag{Name: "password, pass", Value: "guest", Usage: "user password for RabbitMQ server"},
 		cli.StringFlag{Name: "vhost", Value: "", Usage: "vhost for RabbitMQ server"},
+		cli.StringSliceFlag{Name: "consumer-arg", Value: &cli.StringSlice{}, Usage: "Optional `key=value` pair to be sent to consumer arguments, repeat for multiple."},
+		cli.StringSliceFlag{Name: "queue-arg", Value: &cli.StringSlice{}, Usage: "Optional `key=value` pair to be sent to queue declaration arguments, repeat for multiple."},
 		cli.IntFlag{Name: "producer, p", Value: 0, Usage: "Number of messages to produce, -1 to produce forever"},
 		cli.IntFlag{Name: "wait, w", Value: 0, Usage: "Number of nanoseconds to wait between publish events"},
 		cli.IntFlag{Name: "consumer, c", Value: -1, Usage: "Number of messages to consume. 0 consumes forever"},
@@ -45,6 +50,17 @@ func main() {
 
 func runApp(c *cli.Context) {
 	println("Running!")
+
+	queueArgs, err := parseArgs(c.StringSlice("queue-arg"))
+	if err != nil {
+		log.Fatalf("Error parsing queue-arg: %v", err)
+	}
+
+	consumerArgs, err := parseArgs(c.StringSlice("consumer-arg"))
+	if err != nil {
+		log.Fatalf("Error parsing consumer-arg: %v", err)
+	}
+
 	porto := "amqp://"
 	uri := porto + c.String("user") + ":" + c.String("password") + "@" + c.String("server") +
 		":" + c.String("port")
@@ -54,28 +70,28 @@ func runApp(c *cli.Context) {
 	}
 
 	if c.Int("consumer") > -1 {
-		makeConsumers(uri, c.Int("concurrency"), c.Int("consumer"))
+		makeConsumers(uri, c.Int("concurrency"), c.Int("consumer"), queueArgs, consumerArgs)
 	}
 
 	if c.Int("producer") != 0 {
 		config := ProducerConfig{uri, c.Int("bytes"), c.Bool("quiet"), c.Bool("wait-for-ack")}
-		makeProducers(c.Int("producer"), c.Int("wait"), c.Int("concurrency"), config)
+		makeProducers(c.Int("producer"), c.Int("wait"), c.Int("concurrency"), config, queueArgs)
 	}
 }
 
-func MakeQueue(c *amqp.Channel) amqp.Queue {
-	q, err := c.QueueDeclare("stress-test-exchange", true, false, false, false, nil)
+func MakeQueue(c *amqp.Channel, args amqp.Table) amqp.Queue {
+	q, err := c.QueueDeclare("stress-test-exchange", true, false, false, false, args)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return q
 }
 
-func makeProducers(n int, wait int, concurrency int, config ProducerConfig) {
+func makeProducers(n int, wait int, concurrency int, config ProducerConfig, queueArgs amqp.Table) {
 
 	taskChan := make(chan int)
 	for i := 0; i < concurrency; i++ {
-		go Produce(config, taskChan)
+		go Produce(config, taskChan, queueArgs)
 	}
 
 	start := time.Now()
@@ -92,12 +108,12 @@ func makeProducers(n int, wait int, concurrency int, config ProducerConfig) {
 	log.Printf("Finished: %s", time.Since(start))
 }
 
-func makeConsumers(uri string, concurrency int, toConsume int) {
+func makeConsumers(uri string, concurrency int, toConsume int, queueArgs amqp.Table, consumerArgs amqp.Table) {
 
 	doneChan := make(chan bool)
 
 	for i := 0; i < concurrency; i++ {
-		go Consume(uri, doneChan)
+		go Consume(uri, doneChan, queueArgs, consumerArgs)
 	}
 
 	start := time.Now()
@@ -118,4 +134,28 @@ func makeConsumers(uri string, concurrency int, toConsume int) {
 	}
 
 	log.Printf("Done consuming! %s", time.Since(start))
+}
+
+func parseArgs(argSet []string) (amqp.Table, error) {
+	args := amqp.Table{}
+	for _, argKv := range argSet {
+		argKVSplit := strings.SplitN(argKv, "=", 2)
+		if len(argKVSplit) != 2 {
+			return nil, fmt.Errorf("invalid key value pair '%v'", argKv)
+		}
+
+		switch argKVSplit[1] {
+		case "true":
+			args[argKVSplit[0]] = true
+		case "false":
+			args[argKVSplit[0]] = false
+		default:
+			if asInt, err := strconv.Atoi(argKVSplit[0]); err == nil {
+				args[argKVSplit[0]] = asInt
+			} else {
+				args[argKVSplit[0]] = argKVSplit[1]
+			}
+		}
+	}
+	return args, nil
 }

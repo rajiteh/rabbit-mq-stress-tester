@@ -15,7 +15,7 @@ type ProducerConfig struct {
 	WaitForAck bool
 }
 
-func Produce(config ProducerConfig, tasks chan int) {
+func Produce(config ProducerConfig, tasks chan int, queueArgs amqp.Table) {
 	connection, err := amqp.Dial(config.Uri)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -32,7 +32,7 @@ func Produce(config ProducerConfig, tasks chan int) {
 
 	ack, nack := channel.NotifyConfirm(make(chan uint64, 1), make(chan uint64, 1))
 
-	q := MakeQueue(channel)
+	q := MakeQueue(channel, queueArgs)
 
 	for {
 
